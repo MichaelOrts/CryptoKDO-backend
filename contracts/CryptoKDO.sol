@@ -17,7 +17,7 @@ contract CryptoKDO is Ownable {
         address[] givers;
     }
 
-    PrizePool[] public prizePools;
+    PrizePool[] private prizePools;
 
     constructor() Ownable(msg.sender){}
 
