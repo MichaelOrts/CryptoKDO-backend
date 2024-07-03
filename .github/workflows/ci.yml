@@ -16,7 +16,11 @@ jobs:
         uses: actions/setup-node@v1
 
       - name: Install openzeppelin
+<<<<<<< HEAD
         uses: npm install @openzeppelin/contracts
+=======
+        run: npm install @openzeppelin/contracts
+>>>>>>> 71184b3 (add slither github action and fix error on ci.yml)
 
       - name: Cache Node Modules
         id: cache-node-modules
