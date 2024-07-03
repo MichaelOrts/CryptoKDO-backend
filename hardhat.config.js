@@ -7,6 +7,7 @@ const ETHERSCAN = process.env.ETHERSCAN || "";
 
 module.exports = {
   solidity: "0.8.24",
+  defaultNetwork: "hardhat",
   networks: {
     sepolia: {
       url: ALCHEMY,

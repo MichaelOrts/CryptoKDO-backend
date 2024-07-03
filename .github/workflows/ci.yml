@@ -29,4 +29,4 @@ jobs:
         run: npm ci --frozen-lockfile
 
       - name: Run Tests
-        run: npx hardhat test --network hardhat
+        run: npx hardhat test
