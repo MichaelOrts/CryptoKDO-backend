@@ -17,11 +17,7 @@ jobs:
 
       - name: Cache Node Modules
         id: cache-node-modules
-<<<<<<< HEAD
         uses: actions/cache@v2
-=======
-        uses: actions/cache@v3
->>>>>>> 3811dda (add slither github action and fix error on ci.yml)
         with:
           path: 'node_modules'
           key: node_modules-${{ hashFiles('**/package-lock.json') }}
