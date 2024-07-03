@@ -1,0 +1,11 @@
+on: [push]
+
+jobs:
+  main_job:
+    runs-on: ubuntu-latest
+    name: Solidity Security 
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Slither Static Analysis
+        uses: luisfontes19/slither-static-analysis-action@v0.3.4
