@@ -15,6 +15,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v1
 
+<<<<<<< HEAD
       - name: Install openzeppelin
 <<<<<<< HEAD
         uses: npm install @openzeppelin/contracts
@@ -22,6 +23,8 @@ jobs:
         run: npm install @openzeppelin/contracts
 >>>>>>> 71184b3 (add slither github action and fix error on ci.yml)
 
+=======
+>>>>>>> 5ff2983 (add slither github action and fix error on ci.yml)
       - name: Cache Node Modules
         id: cache-node-modules
         uses: actions/cache@v2
@@ -31,7 +34,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
-        run: npm ci
+        run: npm ci --frozen-lockfile
 
       - name: Run Tests
         run: npx hardhat test
