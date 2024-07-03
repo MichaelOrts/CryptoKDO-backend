@@ -2,7 +2,11 @@ require("@nomicfoundation/hardhat-toolbox");
 require("@nomicfoundation/hardhat-verify");
 require('dotenv').config()
 const ALCHEMY = process.env.ALCHEMY || "";
+<<<<<<< HEAD
 const PK = process.env.PK || "0x0000000000000000000000000000000000000000000000000000000000000000";
+=======
+const PK = process.env.PK || "0x00000000000000000000000000000000000000000000000000000000000000";
+>>>>>>> 8c4f682 (change network name localhost in hardhat)
 const ETHERSCAN = process.env.ETHERSCAN || "";
 
 module.exports = {
