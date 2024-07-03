@@ -2,7 +2,7 @@ require("@nomicfoundation/hardhat-toolbox");
 require("@nomicfoundation/hardhat-verify");
 require('dotenv').config()
 const ALCHEMY = process.env.ALCHEMY || "";
-const PK = process.env.PK || "0x00000000000000000000000000000000000000000000000000000000000000";
+const PK = process.env.PK || "";
 const ETHERSCAN = process.env.ETHERSCAN || "";
 
 if(PK){
