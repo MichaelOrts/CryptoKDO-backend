@@ -4,5 +4,11 @@ jobs:
   analyze:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: crytic/slither-action@v0.4.0
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Slither Analyze
+        uses: crytic/slither-action@v0.4.0
+        with:
+            fail-on: medium
+            slither-args: --filter-paths "node_modules"

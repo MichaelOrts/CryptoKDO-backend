@@ -21,9 +21,9 @@ contract CryptoKDO is Ownable {
 
     constructor() Ownable(msg.sender){}
 
-    function isGiver(address[] memory _givers) internal view returns(bool) {
-        for (uint i = 0; i < _givers.length; i++) {
-            if(msg.sender == _givers[i]){
+    function isGiver(address[] memory givers) internal view returns(bool) {
+        for (uint i = 0; i < givers.length; i++) {
+            if(msg.sender == givers[i]){
                 return true;
             }
         }
@@ -42,20 +42,20 @@ contract CryptoKDO is Ownable {
         return prizePools[index];
     }
 
-    function createPrizePool(address _receiver, address[] memory _givers) external {
-        require(_receiver != address(0), "You cannot create prize pool without receiver");
-        require(_givers.length > 0, "You cannot create prize pool without giver");
-        prizePools.push(PrizePool(0,msg.sender, _receiver, _givers));
-        emit PrizePoolCreated(prizePools.length - 1, msg.sender, _receiver, _givers);
+    function createPrizePool(address receiver, address[] memory givers) external {
+        require(receiver != address(0), "You cannot create prize pool without receiver");
+        require(givers.length > 0, "You cannot create prize pool without giver");
+        prizePools.push(PrizePool(0,msg.sender, receiver, givers));
+        emit PrizePoolCreated(prizePools.length - 1, msg.sender, receiver, givers);
     }
 
     function closePrizePool(uint256 index) external {
         require(msg.sender == prizePools[index].owner, "You cannot close prize pool if you are not owner");
         PrizePool memory prizePool = prizePools[index];
         removePrizePool(index);
+        emit PrizePoolClosed(prizePool);
         (bool sent,) = prizePool.receiver.call{value: prizePool.amount}("");
         require(sent, "Failed to withdraw Ether");
-        emit PrizePoolClosed(prizePool);
     }
 
     function donate(uint256 index) external payable {
