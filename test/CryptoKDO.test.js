@@ -13,7 +13,7 @@ async function deployCryptoKDOWithPrizePoolFixture() {
     [contractOwner, owner, receiver, giver1, giver2, other] = await ethers.getSigners();
     let contract = await ethers.getContractFactory('CryptoKDO');
     cryptoKDO = await contract.deploy();
-    await cryptoKDO.connect(owner).createPrizePool(receiver,[giver1, giver2]);
+    await cryptoKDO.connect(owner).createPrizePool(receiver, [giver1, giver2], "test prize pool");
     return {cryptoKDO, giver1, giver2, other};
 }
 
@@ -22,7 +22,7 @@ async function deployCryptoKDOWithFullPrizePoolFixture() {
     let contract = await ethers.getContractFactory('CryptoKDO');
     let amount = ethers.parseEther('0.1');
     cryptoKDO = await contract.deploy();
-    await cryptoKDO.connect(owner).createPrizePool(receiver,[giver1, giver2]);
+    await cryptoKDO.connect(owner).createPrizePool(receiver, [giver1, giver2], "test prize pool");
     await cryptoKDO.connect(giver1).donate(0, {value: amount});
     return {cryptoKDO, owner, receiver, giver1, giver2, other, amount};
 }
@@ -45,35 +45,42 @@ describe('Test CryptoKDO Contract', function() {
         describe('Get prize pool', function() {
             it('should get prize pool', async function() {
                 let {cryptoKDO, contractOwner, owner, receiver, giver1, giver2} = await loadFixture(deployCryptoKDOFixture);
-                await cryptoKDO.connect(owner).createPrizePool(receiver.address, [giver1.address]);
-                await cryptoKDO.connect(owner).createPrizePool(receiver.address, [giver2.address]);
+                await cryptoKDO.connect(owner).createPrizePool(receiver.address, [giver1.address], "test prize pool");
+                await cryptoKDO.connect(owner).createPrizePool(receiver.address, [giver2.address], "test prize pool");
                 let prizePool1 = await cryptoKDO.connect(contractOwner).getPrizePool(0);
                 let prizePool2 = await cryptoKDO.connect(contractOwner).getPrizePool(1);
-                assert.deepEqual(prizePool1, [0n, owner.address, receiver.address, [giver1.address]]);
-                assert.deepEqual(prizePool2, [0n, owner.address, receiver.address, [giver2.address]]);
+                assert.deepEqual(prizePool1, [0n, owner.address, receiver.address, "test prize pool", [giver1.address]]);
+                assert.deepEqual(prizePool2, [0n, owner.address, receiver.address, "test prize pool", [giver2.address]]);
+            });
+            it('should get total prize pools', async function() {
+                let {cryptoKDO, contractOwner, owner, receiver, giver1, giver2} = await loadFixture(deployCryptoKDOFixture);
+                await cryptoKDO.connect(owner).createPrizePool(receiver.address, [giver1.address], "test prize pool");
+                await cryptoKDO.connect(owner).createPrizePool(receiver.address, [giver2.address], "test prize pool");
+                let totalPrizePools = await cryptoKDO.connect(contractOwner).getTotalPrizePools();
+                assert.equal(totalPrizePools, 2);
             });
         });
         describe('Create prize pool', function() {
             it('should not create a prize pool without a receiver', async function() {
                 let {cryptoKDO, owner} = await loadFixture(deployCryptoKDOFixture);
-                await expect(cryptoKDO.connect(owner).createPrizePool('0x0000000000000000000000000000000000000000',[])).to.be.revertedWith("You cannot create prize pool without receiver");
+                await expect(cryptoKDO.connect(owner).createPrizePool('0x0000000000000000000000000000000000000000',[], "test prize pool")).to.be.revertedWith("You cannot create prize pool without receiver");
             });
             it('should not create a prize pool without a giver', async function() {
                 let {cryptoKDO, owner, receiver} = await loadFixture(deployCryptoKDOFixture);
-                await expect(cryptoKDO.connect(owner).createPrizePool(receiver,[])).to.be.revertedWith("You cannot create prize pool without giver");
+                await expect(cryptoKDO.connect(owner).createPrizePool(receiver,[], "test prize pool")).to.be.revertedWith("You cannot create prize pool without giver");
             });
             it('should create an empty prize pool with a receiver and at least a giver', async function() {
                 let {cryptoKDO, contractOwner, owner, receiver, giver1} = await loadFixture(deployCryptoKDOFixture);
-                await expect(cryptoKDO.connect(owner).createPrizePool(receiver,[giver1])).to.emit(cryptoKDO, 'PrizePoolCreated').withArgs(0, owner, receiver, [giver1]);
+                await expect(cryptoKDO.connect(owner).createPrizePool(receiver,[giver1], "test prize pool")).to.emit(cryptoKDO, 'PrizePoolCreated').withArgs(0, owner, receiver, [giver1], "test prize pool");
                 let prizePool = await cryptoKDO.connect(contractOwner).getPrizePool(0);
-                assert.deepEqual(prizePool, [0n, owner.address, receiver.address, [giver1.address]]);
+                assert.deepEqual(prizePool, [0n, owner.address, receiver.address, "test prize pool", [giver1.address]]);
             });
     
             it('should create an empty prize pool with a receiver and two givers', async function() {
                 let {cryptoKDO, contractOwner, owner, receiver, giver1, giver2} = await loadFixture(deployCryptoKDOFixture);
-                await expect(cryptoKDO.connect(owner).createPrizePool(receiver,[giver1, giver2])).to.emit(cryptoKDO, 'PrizePoolCreated').withArgs(0, owner, receiver, [giver1, giver2]);
+                await expect(cryptoKDO.connect(owner).createPrizePool(receiver,[giver1, giver2], "test prize pool")).to.emit(cryptoKDO, 'PrizePoolCreated').withArgs(0, owner, receiver, [giver1, giver2], "test prize pool");
                 let prizePool = await cryptoKDO.connect(contractOwner).getPrizePool(0);
-                assert.deepEqual(prizePool, [0n, owner.address, receiver.address, [giver1.address, giver2.address]]);
+                assert.deepEqual(prizePool, [0n, owner.address, receiver.address, "test prize pool", [giver1.address, giver2.address]]);
             });
         });
   
@@ -128,7 +135,7 @@ describe('Test CryptoKDO Contract', function() {
                 let {cryptoKDO, owner, receiver, giver1, giver2, amount} = await loadFixture(deployCryptoKDOWithFullPrizePoolFixture);
                 let receiverBalanceBefore = await ethers.provider.getBalance(receiver.address);
                 let prizePoolBalance = (await cryptoKDO.connect(owner).getPrizePool(0)).amount;
-                await expect(cryptoKDO.connect(owner).closePrizePool(0)).to.emit(cryptoKDO, 'PrizePoolClosed').withArgs([amount, owner, receiver, [giver1, giver2]]);
+                await expect(cryptoKDO.connect(owner).closePrizePool(0)).to.emit(cryptoKDO, 'PrizePoolClosed').withArgs([amount, owner, receiver, "test prize pool", [giver1, giver2]]);
                 await expect(cryptoKDO.connect(owner).getPrizePool(0)).to.be.revertedWith("Any prize pool exist at index 0");
                 let contractBalance = await ethers.provider.getBalance(cryptoKDO.target);
                 let receiverBalanceAfter = await ethers.provider.getBalance(receiver.address);
