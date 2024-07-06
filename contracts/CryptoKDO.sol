@@ -10,13 +10,14 @@ contract CryptoKDO is Ownable {
         uint256 amount;
         address owner;
         address receiver;
+        string title;
         string description;
         address[] givers;
     }
 
     PrizePool[] private prizePools;
 
-    event PrizePoolCreated(uint id, address owner, address receiver, address[] givers, string description);
+    event PrizePoolCreated(uint id, address owner, address receiver, address[] givers, string title, string description);
     event DonationDone(uint id, address giver, uint amount);
     event PrizePoolClosed(PrizePool prizePool);
 
@@ -24,11 +25,12 @@ contract CryptoKDO is Ownable {
 
     receive() payable external {}
 
-    function createPrizePool(address receiver, address[] calldata givers, string calldata description) external {
+    function createPrizePool(address receiver, address[] calldata givers, string calldata title, string calldata description) external {
         require(receiver != address(0), "You cannot create prize pool without receiver");
         require(givers.length > 0, "You cannot create prize pool without giver");
-        prizePools.push(PrizePool(0,msg.sender, receiver, description, givers));
-        emit PrizePoolCreated(prizePools.length - 1, msg.sender, receiver, givers, description);
+        require(!Strings.equal(title, "") , "You cannot create prize pool without title");
+        prizePools.push(PrizePool(0,msg.sender, receiver, title, description, givers));
+        emit PrizePoolCreated(prizePools.length - 1, msg.sender, receiver, givers, title, description);
     }
 
     function closePrizePool(uint256 index) external {
@@ -54,6 +56,10 @@ contract CryptoKDO is Ownable {
     function getPrizePool(uint index) external view returns (PrizePool memory) {
         require(index < prizePools.length, string.concat("Any prize pool exist at index ", Strings.toString(index)));
         return prizePools[index];
+    }
+
+    function getAllPrizePools() external view returns (PrizePool[] memory) {
+        return prizePools;
     }
 
     function removePrizePool(uint256 index) internal {
