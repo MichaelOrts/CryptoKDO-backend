@@ -1,6 +1,6 @@
 const { loadFixture } = require("@nomicfoundation/hardhat-toolbox/network-helpers");
 const { expect, assert } = require("chai");
-const {ethers} = require('hardhat');
+const { ethers } = require('hardhat');
   
 async function deployCryptoKDOFixture() {
     [contractOwner, owner, receiver, giver1, giver2] = await ethers.getSigners();

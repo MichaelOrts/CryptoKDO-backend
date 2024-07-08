@@ -23,7 +23,7 @@ contract CryptoKDO is Ownable {
 
     constructor() Ownable(msg.sender){}
 
-    receive() payable external {}
+    receive() external payable {}
 
     function createPrizePool(address receiver, address[] calldata givers, string calldata title, string calldata description) external {
         require(receiver != address(0), "You cannot create prize pool without receiver");
