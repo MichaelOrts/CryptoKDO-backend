@@ -7,8 +7,8 @@ import "./IWrappedTokenGatewayV3.sol";
 
 contract VaultKDO is Ownable {
 
-    IWrappedTokenGatewayV3 private wtgV3;//0x387d311e47e80b498169e6fb51d3193167d89F7D 
-    IERC20 private erc20Token;//0x5b071b590a59395fE4025A0Ccc1FcC931AAc1830 
+    IWrappedTokenGatewayV3 private immutable wtgV3;//0x387d311e47e80b498169e6fb51d3193167d89F7D 
+    IERC20 private immutable erc20Token;//0x5b071b590a59395fE4025A0Ccc1FcC931AAc1830 
 
     event DepositDone(uint256 amount);
     event WithdrawDone(uint256 amount);
@@ -21,16 +21,16 @@ contract VaultKDO is Ownable {
     receive() external payable {}
 
     function deposit() external payable onlyOwner {
-        wtgV3.depositETH{value: msg.value}(address(0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951),address(this),0);
         emit DepositDone(msg.value);
+        wtgV3.depositETH{value: msg.value}(address(0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951),address(this),0);
     }
 
     function withdraw(uint256 amount) external onlyOwner {
-        erc20Token.approve(address(0x387d311e47e80b498169e6fb51d3193167d89F7D), amount);
+        emit WithdrawDone(amount);
+        require(erc20Token.approve(address(wtgV3), amount), "approve failed");
         wtgV3.withdrawETH(address(0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951), amount, address(this));
         (bool sent,) = msg.sender.call{value: address(this).balance}("");
         require(sent, "Failed to withdraw Ether");
-        emit WithdrawDone(amount);
     }
 
     function getSupply() external view onlyOwner returns (uint256) {
