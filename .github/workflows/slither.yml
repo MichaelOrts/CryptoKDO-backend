@@ -11,4 +11,4 @@ jobs:
         uses: crytic/slither-action@v0.4.0
         with:
             fail-on: medium
-            slither-args: --filter-paths "node_modules"
+            slither-args: --filter-paths "node_modules|contracts/mock" 

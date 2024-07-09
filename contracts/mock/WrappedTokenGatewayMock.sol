@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity 0.8.24;
 
-import "../contracts/IWrappedTokenGatewayV3.sol";
+import "../IWrappedTokenGatewayV3.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 contract WrappedTokenGatewayMock is IWrappedTokenGatewayV3 {
