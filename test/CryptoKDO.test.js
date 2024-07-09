@@ -5,14 +5,22 @@ const { ethers } = require('hardhat');
 async function deployCryptoKDOFixture() {
     [contractOwner, owner, receiver, giver1, giver2] = await ethers.getSigners();
     let contract = await ethers.getContractFactory('CryptoKDO');
-    cryptoKDO = await contract.deploy();
+    let eRC20Contract = await ethers.getContractFactory('ERC20Mock');
+    let wtgContract = await ethers.getContractFactory('WrappedTokenGatewayMock');
+    eRC20 = await eRC20Contract.deploy();
+    wtg = await wtgContract.deploy(eRC20,{value : ethers.parseEther('1000')});
+    cryptoKDO = await contract.deploy(wtg, eRC20);
     return {cryptoKDO, contractOwner, owner, receiver, giver1, giver2};
 }
 
 async function deployCryptoKDOWithPrizePoolFixture() {
     [contractOwner, owner, receiver, giver1, giver2, other] = await ethers.getSigners();
     let contract = await ethers.getContractFactory('CryptoKDO');
-    cryptoKDO = await contract.deploy();
+    let eRC20Contract = await ethers.getContractFactory('ERC20Mock');
+    let wtgContract = await ethers.getContractFactory('WrappedTokenGatewayMock');
+    eRC20 = await eRC20Contract.deploy();
+    wtg = await wtgContract.deploy(eRC20,{value : ethers.parseEther('1000')});
+    cryptoKDO = await contract.deploy(wtg, eRC20);
     await cryptoKDO.connect(owner).createPrizePool(receiver, [giver1, giver2], "Prize Pool", "test prize pool");
     return {cryptoKDO, giver1, giver2, other};
 }
@@ -21,7 +29,11 @@ async function deployCryptoKDOWithFullPrizePoolFixture() {
     [contractOwner, owner, receiver, giver1, giver2, other] = await ethers.getSigners();
     let contract = await ethers.getContractFactory('CryptoKDO');
     let amount = ethers.parseEther('0.1');
-    cryptoKDO = await contract.deploy();
+    let eRC20Contract = await ethers.getContractFactory('ERC20Mock');
+    let wtgContract = await ethers.getContractFactory('WrappedTokenGatewayMock');
+    eRC20 = await eRC20Contract.deploy();
+    wtg = await wtgContract.deploy(eRC20,{value : ethers.parseEther('1000')});
+    cryptoKDO = await contract.deploy(wtg, eRC20);
     await cryptoKDO.connect(owner).createPrizePool(receiver, [giver1, giver2], "Prize Pool", "test prize pool");
     await cryptoKDO.connect(giver1).donate(0, {value: amount});
     return {cryptoKDO, owner, receiver, giver1, giver2, other, amount};
@@ -66,6 +78,15 @@ describe('Test CryptoKDO Contract', function() {
                 let prizePools = await cryptoKDO.connect(contractOwner).getAllPrizePools();
                 assert.deepEqual(prizePools, [[0n, owner.address, receiver.address, "Prize Pool", "test prize pool", [giver1.address]], [0n, owner.address, receiver.address, "Prize Pool", "test prize pool", [giver2.address]]]);
             });
+            it('should get total supply', async function() {
+                let {cryptoKDO, contractOwner, owner, receiver, giver1, giver2} = await loadFixture(deployCryptoKDOFixture);
+                await cryptoKDO.connect(owner).createPrizePool(receiver.address, [giver1.address], "Prize Pool", "test prize pool");
+                await cryptoKDO.connect(owner).createPrizePool(receiver.address, [giver2.address], "Prize Pool", "test prize pool");
+                await cryptoKDO.connect(giver1).donate(0, {value : ethers.parseEther('0.005')});
+                await cryptoKDO.connect(giver2).donate(1, {value : ethers.parseEther('0.005')});
+                let totalSupply = await cryptoKDO.connect(contractOwner).getTotalSupply();
+                assert.equal(totalSupply, ethers.parseEther('0.01'));
+            });
         });
         describe('Create prize pool', function() {
             it('should not create a prize pool without a receiver', async function() {
@@ -109,10 +130,10 @@ describe('Test CryptoKDO Contract', function() {
                 let giver1BalanceBefore = await ethers.provider.getBalance(giver1.address);
                 await expect(cryptoKDO.connect(giver1).donate(0, {value: ethers.parseEther('0.003')})).to.emit(cryptoKDO, 'DonationDone').withArgs(0, giver1.address, ethers.parseEther('0.003'));
                 let prizePoolBalance = (await cryptoKDO.connect(giver1).getPrizePool(0)).amount;
-                let contractBalance = await ethers.provider.getBalance(cryptoKDO.target);
+                let totalSupply = await cryptoKDO.connect(giver1).getTotalSupply();
                 let giver1BalanceAfter = await ethers.provider.getBalance(giver1.address);
                 assert.equal(prizePoolBalance, ethers.parseEther('0.003'));
-                assert.equal(contractBalance, ethers.parseEther('0.003'));
+                assert.equal(totalSupply, ethers.parseEther('0.003'));
                 expect(giver1BalanceAfter).to.be.approximately(giver1BalanceBefore - prizePoolBalance, 1000000000000000n);
             });
             it('should donate many times', async function() {
@@ -128,9 +149,9 @@ describe('Test CryptoKDO Contract', function() {
                 giver1BalanceAfter = await ethers.provider.getBalance(giver1.address);
                 let giver2BalanceAfter = await ethers.provider.getBalance(giver2.address);
                 prizePoolBalance = (await cryptoKDO.connect(giver1).getPrizePool(0)).amount;
-                let contractBalance = await ethers.provider.getBalance(cryptoKDO.target);
+                let totalSupply = await cryptoKDO.connect(giver1).getTotalSupply();
                 assert.equal(prizePoolBalance, ethers.parseEther('0.31'));
-                assert.equal(contractBalance, ethers.parseEther('0.31'));
+                assert.equal(totalSupply, ethers.parseEther('0.31'));
                 expect(giver1BalanceAfter).to.be.approximately(giver1BalanceBefore - prizePoolBalance + ethers.parseEther('0.2'), 1000000000000000n);
                 expect(giver2BalanceAfter).to.be.approximately(giver2BalanceBefore - prizePoolBalance + ethers.parseEther('0.11'), 1000000000000000n);
             });

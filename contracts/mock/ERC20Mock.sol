@@ -24,10 +24,6 @@ contract ERC20Mock is IERC20 {
 
     modifier applyReward(address account){
         balances[account].amount += calculReward(account);
-        console.log("current timestamp : %s", block.timestamp);
-        console.log("balance timestamp : %s", balances[account].timestamp);
-        console.log("duration : %s", block.timestamp - balances[account].timestamp);
-        console.log("duration modulo: %s", (block.timestamp - balances[account].timestamp) % rewardDuration);
         balances[account].timestamp = block.timestamp - (block.timestamp - balances[account].timestamp) % rewardDuration;
         _;
     }

@@ -8,7 +8,7 @@ contract WrappedTokenGatewayMock is IWrappedTokenGatewayV3 {
 
     IERC20 token;
 
-    constructor(IERC20 erc20){
+    constructor(IERC20 erc20) payable {
         token = erc20;
     }
 

@@ -8,7 +8,7 @@ async function deployVaultKDOFixture() {
     let eRC20Contract = await ethers.getContractFactory('ERC20Mock');
     let wtgContract = await ethers.getContractFactory('WrappedTokenGatewayMock');
     eRC20 = await eRC20Contract.deploy();
-    wtg = await wtgContract.deploy(eRC20);
+    wtg = await wtgContract.deploy(eRC20,{value : ethers.parseEther('1000')});
     vaultKDO = await contract.deploy(wtg, eRC20);
     return {vaultKDO, contractOwner, other};
 }
@@ -19,7 +19,7 @@ async function deployVaultKDOWithDepositFixture() {
     let eRC20Contract = await ethers.getContractFactory('ERC20Mock');
     let wtgContract = await ethers.getContractFactory('WrappedTokenGatewayMock');
     eRC20 = await eRC20Contract.deploy();
-    wtg = await wtgContract.deploy(eRC20);
+    wtg = await wtgContract.deploy(eRC20,{value : ethers.parseEther('1000')});
     vaultKDO = await contract.deploy(wtg, eRC20);
     await vaultKDO.connect(contractOwner).deposit({value: ethers.parseEther('1')})
     return {vaultKDO, contractOwner, other};
@@ -80,16 +80,20 @@ describe('Test VaultKDO Contract', function() {
         describe('GetReward', function() {
             it('should get reward if staking duration is enough', async function() {
                 let {vaultKDO, contractOwner} = await loadFixture(deployVaultKDOWithDepositFixture);
+                let contractOwnerBalanceBefore = await ethers.provider.getBalance(contractOwner.address);
                 let balance = await vaultKDO.connect(contractOwner).getSupply();
                 assert.equal(balance, ethers.parseEther('1'));
-               // console.log(await time.latestBlock());
-                let timestamp = await time.increase(3600 * 24);
-                //console.log(timestamp);
+                await time.increase(3600 * 24);
                 balance = await vaultKDO.connect(contractOwner).getSupply();
                 assert.equal(balance, ethers.parseEther('1.1'));
                 await time.increase(3600 * 24 * 3);
                 balance = await vaultKDO.connect(contractOwner).getSupply();
                 assert.equal(balance, ethers.parseEther('1.4641'));
+                await expect(vaultKDO.connect(contractOwner).withdraw(ethers.parseEther('1.4641'))).to.emit(vaultKDO, 'WithdrawDone').withArgs(ethers.parseEther('1.4641'));
+                let contractOwnerBalanceAfter = await ethers.provider.getBalance(contractOwner.address);
+                balance = await vaultKDO.connect(contractOwner).getSupply();
+                assert.equal(balance, ethers.parseEther('0'));
+                expect(contractOwnerBalanceAfter).to.be.approximately(contractOwnerBalanceBefore + ethers.parseEther('1.4641'), 1000000000000000n);
             })
         })
     })

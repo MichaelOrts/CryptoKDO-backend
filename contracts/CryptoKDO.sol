@@ -3,6 +3,9 @@ pragma solidity 0.8.24;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/interfaces/IERC20.sol";
+import "./IWrappedTokenGatewayV3.sol";
+import "./VaultKDO.sol";
 
 contract CryptoKDO is Ownable {
 
@@ -15,13 +18,16 @@ contract CryptoKDO is Ownable {
         address[] givers;
     }
 
+    VaultKDO private immutable vault;
     PrizePool[] private prizePools;
 
     event PrizePoolCreated(uint id, address owner, address receiver, address[] givers, string title, string description);
     event DonationDone(uint id, address giver, uint amount);
     event PrizePoolClosed(PrizePool prizePool);
 
-    constructor() Ownable(msg.sender){}
+    constructor(IWrappedTokenGatewayV3 wtg, IERC20 erc20) Ownable(msg.sender) {
+        vault = new VaultKDO(wtg, erc20);
+    }
 
     receive() external payable {}
 
@@ -38,6 +44,7 @@ contract CryptoKDO is Ownable {
         PrizePool memory prizePool = prizePools[index];
         removePrizePool(index);
         emit PrizePoolClosed(prizePool);
+        vault.withdraw(prizePool.amount);
         (bool sent,) = prizePool.receiver.call{value: prizePool.amount}("");
         require(sent, "Failed to withdraw Ether");
     }
@@ -47,6 +54,7 @@ contract CryptoKDO is Ownable {
         require(msg.value >= 0.003 ether, "Donation minimum is 0.003 ether");
         prizePools[index].amount += msg.value;
         emit DonationDone(index, msg.sender, msg.value);
+        vault.deposit{value: msg.value}();
     }
 
     function getTotalPrizePools() external view returns (uint) {
@@ -60,6 +68,10 @@ contract CryptoKDO is Ownable {
 
     function getAllPrizePools() external view returns (PrizePool[] memory) {
         return prizePools;
+    }
+
+    function getTotalSupply() external view returns (uint256) {
+        return vault.getSupply();
     }
 
     function removePrizePool(uint256 index) internal {
