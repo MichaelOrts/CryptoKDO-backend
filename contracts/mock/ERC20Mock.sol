@@ -2,6 +2,8 @@
 pragma solidity 0.8.24;
 
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "hardhat/console.sol";
 
 contract ERC20Mock is IERC20 {
 
@@ -21,9 +23,24 @@ contract ERC20Mock is IERC20 {
     }
 
     modifier applyReward(address account){
-        balances[account].amount *= (block.timestamp - balances[account].timestamp) / rewardDuration * rewardRate / 100 + 1;
-        balances[account].timestamp = block.timestamp;
+        balances[account].amount += calculReward(account);
+        console.log("current timestamp : %s", block.timestamp);
+        console.log("balance timestamp : %s", balances[account].timestamp);
+        console.log("duration : %s", block.timestamp - balances[account].timestamp);
+        console.log("duration modulo: %s", (block.timestamp - balances[account].timestamp) % rewardDuration);
+        balances[account].timestamp = block.timestamp - (block.timestamp - balances[account].timestamp) % rewardDuration;
         _;
+    }
+
+    function calculReward(address account) internal view returns(uint256) {
+        if(balances[account].timestamp > 0){
+            uint256 duration = block.timestamp - balances[account].timestamp;
+            uint256 nbPeriods = duration / rewardDuration;
+            uint256 apy_100xNbPeriods = (100 + rewardRate) ** nbPeriods;
+            return balances[account].amount * apy_100xNbPeriods / 100 ** nbPeriods - balances[account].amount;
+        }else {
+            return 0;
+        }
     }
 
     function totalSupply() external view override returns (uint256) {}
@@ -31,7 +48,7 @@ contract ERC20Mock is IERC20 {
     function balanceOf(
         address account
     ) external view override returns (uint256) {
-        return balances[account].amount;
+        return balances[account].amount + calculReward(account);
     }
 
     function transfer(

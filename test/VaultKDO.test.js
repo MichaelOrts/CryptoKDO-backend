@@ -76,5 +76,21 @@ describe('Test VaultKDO Contract', function() {
                 expect(contractOwnerBalanceAfter).to.be.approximately(contractOwnerBalanceBefore + ethers.parseEther('1'), 1000000000000000n);
             })
         })
+
+        describe('GetReward', function() {
+            it('should get reward if staking duration is enough', async function() {
+                let {vaultKDO, contractOwner} = await loadFixture(deployVaultKDOWithDepositFixture);
+                let balance = await vaultKDO.connect(contractOwner).getSupply();
+                assert.equal(balance, ethers.parseEther('1'));
+               // console.log(await time.latestBlock());
+                let timestamp = await time.increase(3600 * 24);
+                //console.log(timestamp);
+                balance = await vaultKDO.connect(contractOwner).getSupply();
+                assert.equal(balance, ethers.parseEther('1.1'));
+                await time.increase(3600 * 24 * 3);
+                balance = await vaultKDO.connect(contractOwner).getSupply();
+                assert.equal(balance, ethers.parseEther('1.4641'));
+            })
+        })
     })
 })
