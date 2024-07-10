@@ -35,8 +35,8 @@ contract VaultKDO is Ownable {
      * Deposits funds on Aave platform.
      */
     function deposit() external payable onlyOwner {
-        wtgV3.depositETH{value: msg.value}(address(0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951),address(this),0);
         emit DepositDone(msg.value);
+        wtgV3.depositETH{value: msg.value}(address(0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951),address(this),0);
     }
 
     /**

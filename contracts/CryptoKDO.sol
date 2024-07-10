@@ -69,9 +69,9 @@ contract CryptoKDO is Ownable {
         require(msg.sender == prizePools[index].owner, "You cannot close prize pool if you are not owner");
         PrizePool memory prizePool = prizePools[index];
         removePrizePool(index);
-        vault.withdraw(prizePool.amount);
         currentSupply -= prizePool.amount;
         emit PrizePoolClosed(prizePool);
+        vault.withdraw(prizePool.amount);
         (bool sent,) = prizePool.receiver.call{value: prizePool.amount}("");
         require(sent, "Failed to withdraw Ether");
     }
@@ -86,8 +86,8 @@ contract CryptoKDO is Ownable {
         require(msg.value >= 0.003 ether, "Donation minimum is 0.003 ether");
         prizePools[index].amount += msg.value;
         currentSupply += msg.value;
-        vault.deposit{value: msg.value}();
         emit DonationDone(index, msg.sender, msg.value);
+        vault.deposit{value: msg.value}();
     }
 
     /**
