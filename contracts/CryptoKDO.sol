@@ -105,7 +105,7 @@ contract CryptoKDO is Ownable {
     function getPrizePool(uint index) external view returns (PrizePool memory) {
         require(index < prizePools.length, string.concat("Any prize pool exist at index ", Strings.toString(index)));
         PrizePool memory prizePool = prizePools[index];
-        prizePool.amount += computeReward(prizePool.amount);
+        prizePool.amount += computeReward(prizePool.amount, getTotalSupply());
         return prizePool;
     }
 
@@ -114,8 +114,9 @@ contract CryptoKDO is Ownable {
      */
     function getAllPrizePools() external view returns (PrizePool[] memory) {
         PrizePool[] memory pools = prizePools;
+        uint256 totalSupply = getTotalSupply();
         for (uint i = 0; i < pools.length; i++) {
-            pools[i].amount += computeReward(pools[i].amount);
+            pools[i].amount += computeReward(pools[i].amount, totalSupply);
         }
         return pools;
     }
@@ -157,12 +158,11 @@ contract CryptoKDO is Ownable {
      * Computes reward switch amount deposited.
      * 
      * @param amount amount to compute
+     * @param totalSupply supply with rewards
      */
-    function computeReward(uint256 amount) internal view returns (uint256) {
-        uint256 reward = getTotalSupply() - currentSupply;
-        if (reward > 0){
-            uint256 rewardPercentX18Zero = amount * 1000000000000000000 / currentSupply;
-            return reward * rewardPercentX18Zero / 1000000000000000000;
+    function computeReward(uint256 amount, uint256 totalSupply) internal view returns (uint256) {
+        if (currentSupply > 0){
+            return (totalSupply - currentSupply) * amount / currentSupply;
         }else{
             return 0;
         }
@@ -172,10 +172,11 @@ contract CryptoKDO is Ownable {
      * Updates rewards on prize pools and supply.
      */
     modifier updateRewards() {
+        uint256 totalSupply = getTotalSupply();
         for (uint i = 0; i < prizePools.length; i++) {
-            prizePools[i].amount += computeReward(prizePools[i].amount);
+            prizePools[i].amount += computeReward(prizePools[i].amount, totalSupply);
         }
-        currentSupply = getTotalSupply();
+        currentSupply = totalSupply;
         _;
     }
 

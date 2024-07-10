@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: AGPL-3.0
-pragma solidity ^0.8.10;
+// SPDX-License-Identifier: SEE LICENSE IN LICENSE
+pragma solidity 0.8.24;
 
 interface IWrappedTokenGatewayV3 {
   function depositETH(address pool, address onBehalfOf, uint16 referralCode) external payable;
