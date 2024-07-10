@@ -1,4 +1,4 @@
-const { loadFixture } = require("@nomicfoundation/hardhat-toolbox/network-helpers");
+const { time, loadFixture } = require("@nomicfoundation/hardhat-toolbox/network-helpers");
 const { expect, assert } = require("chai");
 const { ethers } = require('hardhat');
   
@@ -37,6 +37,24 @@ async function deployCryptoKDOWithFullPrizePoolFixture() {
     await cryptoKDO.connect(owner).createPrizePool(receiver, [giver1, giver2], "Prize Pool", "test prize pool");
     await cryptoKDO.connect(giver1).donate(0, {value: amount});
     return {cryptoKDO, owner, receiver, giver1, giver2, other, amount};
+}
+
+async function deployCryptoKDOWithPassedTimeFixture() {
+    [contractOwner, owner, receiver, giver1, giver2] = await ethers.getSigners();
+    let contract = await ethers.getContractFactory('CryptoKDO');
+    let amount = ethers.parseEther('0.1');
+    let eRC20Contract = await ethers.getContractFactory('ERC20Mock');
+    let wtgContract = await ethers.getContractFactory('WrappedTokenGatewayMock');
+    eRC20 = await eRC20Contract.deploy();
+    wtg = await wtgContract.deploy(eRC20,{value : ethers.parseEther('1000')});
+    cryptoKDO = await contract.deploy(wtg, eRC20);
+    await cryptoKDO.connect(owner).createPrizePool(receiver, [giver1, giver2], "Prize Pool", "test prize pool");
+    await cryptoKDO.connect(owner).createPrizePool(receiver, [giver1, giver2], "Prize Pool", "test prize pool");
+    await cryptoKDO.connect(giver1).donate(0, {value: amount});
+    await time.increase(3600 * 24);
+    await cryptoKDO.connect(giver2).donate(1, {value: amount * 2n});
+    await time.increase(3600 * 24 * 2);
+    return {cryptoKDO, owner, receiver};
 }
   
 describe('Test CryptoKDO Contract', function() {
@@ -157,25 +175,52 @@ describe('Test CryptoKDO Contract', function() {
             });
         });
   
-        describe('Give prize pool', function() {
-            it('should not give prize pool if not the owner', async function() {
+        describe('Close prize pool', function() {
+            it('should not close prize pool if not the owner', async function() {
                 let {cryptoKDO, other} = await loadFixture(deployCryptoKDOWithFullPrizePoolFixture);
                 await expect(cryptoKDO.connect(other).closePrizePool(0)).to.be.revertedWith("You cannot close prize pool if you are not owner");
             });
     
-            it('should give prize pool if owner', async function() {
+            it('should close prize pool if owner', async function() {
                 let {cryptoKDO, owner, receiver, giver1, giver2, amount} = await loadFixture(deployCryptoKDOWithFullPrizePoolFixture);
                 let receiverBalanceBefore = await ethers.provider.getBalance(receiver.address);
                 let prizePoolBalance = (await cryptoKDO.connect(owner).getPrizePool(0)).amount;
                 await expect(cryptoKDO.connect(owner).closePrizePool(0)).to.emit(cryptoKDO, 'PrizePoolClosed').withArgs([amount, owner, receiver, "Prize Pool", "test prize pool", [giver1, giver2]]);
                 await expect(cryptoKDO.connect(owner).getPrizePool(0)).to.be.revertedWith("Any prize pool exist at index 0");
-                let contractBalance = await ethers.provider.getBalance(cryptoKDO.target);
                 let receiverBalanceAfter = await ethers.provider.getBalance(receiver.address);
                 assert.equal(prizePoolBalance, amount);
-                assert.equal(contractBalance, ethers.parseEther('0'));
                 assert.equal(receiverBalanceAfter,receiverBalanceBefore + prizePoolBalance);
             });
         });
     });
+
+    describe('Rewards actualisation', function() {
+        it('should get total supply with reward', async function() {
+            let {cryptoKDO, owner} = await loadFixture(deployCryptoKDOWithPassedTimeFixture);
+            let totalSupply = await cryptoKDO.connect(owner).getTotalSupply();
+            assert.equal(totalSupply, ethers.parseEther('0.3751'));
+        })
+        it('should get a prize pool with reward', async function() {
+            let {cryptoKDO, owner} = await loadFixture(deployCryptoKDOWithPassedTimeFixture);
+            let prizePoolBalance = (await cryptoKDO.connect(owner).getPrizePool(1)).amount;
+            expect(prizePoolBalance).to.be.approximately(ethers.parseEther('0.242'),1000000000000000n)
+        })
+        it('should get all prize pools with reward', async function() {
+            let {cryptoKDO, owner} = await loadFixture(deployCryptoKDOWithPassedTimeFixture);
+            let prizePools = await cryptoKDO.connect(owner).getAllPrizePools();
+            expect(prizePools[0].amount).to.be.approximately(ethers.parseEther('0.1331'),1000000000000000n)
+            expect(prizePools[1].amount).to.be.approximately(ethers.parseEther('0.242'),1000000000000000n)
+        })
+        it('should close prize pools with reward', async function() {
+            let {cryptoKDO, owner, receiver} = await loadFixture(deployCryptoKDOWithPassedTimeFixture);
+            let receiverBalanceBefore = await ethers.provider.getBalance(receiver.address);
+            await cryptoKDO.connect(owner).closePrizePool(0);
+            let receiverBalanceBetween = await ethers.provider.getBalance(receiver.address);
+            await cryptoKDO.connect(owner).closePrizePool(0);
+            let receiverBalanceAfter = await ethers.provider.getBalance(receiver.address);
+            expect(receiverBalanceBetween).to.be.approximately(receiverBalanceBefore + ethers.parseEther('0.1331'),1000000000000000n)
+            expect(receiverBalanceAfter).to.be.approximately(receiverBalanceBefore + ethers.parseEther('0.3751'),1000000000000000n)
+        })
+    })
 });
   

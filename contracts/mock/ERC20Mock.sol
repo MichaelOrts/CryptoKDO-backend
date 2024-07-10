@@ -2,8 +2,6 @@
 pragma solidity 0.8.24;
 
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
-import "hardhat/console.sol";
 
 contract ERC20Mock is IERC20 {
 
