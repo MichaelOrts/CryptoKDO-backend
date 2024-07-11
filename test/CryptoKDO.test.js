@@ -9,7 +9,7 @@ async function deployCryptoKDOFixture() {
     let wtgContract = await ethers.getContractFactory('WrappedTokenGatewayMock');
     eRC20 = await eRC20Contract.deploy();
     wtg = await wtgContract.deploy(eRC20,{value : ethers.parseEther('1000')});
-    cryptoKDO = await contract.deploy(wtg, eRC20);
+    cryptoKDO = await contract.deploy(wtg, eRC20,0,'0x0000000000000000000000000000000000000000',"0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc");
     return {cryptoKDO, contractOwner, owner, receiver, giver1, giver2};
 }
 
@@ -20,7 +20,7 @@ async function deployCryptoKDOWithPrizePoolFixture() {
     let wtgContract = await ethers.getContractFactory('WrappedTokenGatewayMock');
     eRC20 = await eRC20Contract.deploy();
     wtg = await wtgContract.deploy(eRC20,{value : ethers.parseEther('1000')});
-    cryptoKDO = await contract.deploy(wtg, eRC20);
+    cryptoKDO = await contract.deploy(wtg, eRC20,0,'0x0000000000000000000000000000000000000000',"0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc");
     await cryptoKDO.connect(owner).createPrizePool(receiver, [giver1, giver2], "Prize Pool", "test prize pool");
     return {cryptoKDO, giver1, giver2, other};
 }
@@ -33,7 +33,7 @@ async function deployCryptoKDOWithFullPrizePoolFixture() {
     let wtgContract = await ethers.getContractFactory('WrappedTokenGatewayMock');
     eRC20 = await eRC20Contract.deploy();
     wtg = await wtgContract.deploy(eRC20,{value : ethers.parseEther('1000')});
-    cryptoKDO = await contract.deploy(wtg, eRC20);
+    cryptoKDO = await contract.deploy(wtg, eRC20,0,'0x0000000000000000000000000000000000000000',"0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc");
     await cryptoKDO.connect(owner).createPrizePool(receiver, [giver1, giver2], "Prize Pool", "test prize pool");
     await cryptoKDO.connect(giver1).donate(0, {value: amount});
     return {cryptoKDO, owner, receiver, giver1, giver2, other, amount};
@@ -47,7 +47,7 @@ async function deployCryptoKDOWithPassedTimeFixture() {
     let wtgContract = await ethers.getContractFactory('WrappedTokenGatewayMock');
     eRC20 = await eRC20Contract.deploy();
     wtg = await wtgContract.deploy(eRC20,{value : ethers.parseEther('1000')});
-    cryptoKDO = await contract.deploy(wtg, eRC20);
+    cryptoKDO = await contract.deploy(wtg, eRC20,0,'0x0000000000000000000000000000000000000000',"0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc");
     await cryptoKDO.connect(owner).createPrizePool(receiver, [giver1, giver2], "Prize Pool", "test prize pool");
     await cryptoKDO.connect(owner).createPrizePool(receiver, [giver1, giver2], "Prize Pool", "test prize pool");
     await cryptoKDO.connect(giver1).donate(0, {value: amount});

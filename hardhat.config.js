@@ -20,7 +20,16 @@ if(PK){
 }
 
 module.exports = {
-  solidity: "0.8.24",
+  solidity: {
+    compilers: [
+      {
+        version: "0.8.19",
+      },
+      {
+        version: "0.8.24",
+      },
+    ],
+  },
   defaultNetwork: "hardhat",
   networks: {
     sepolia: sepolia,

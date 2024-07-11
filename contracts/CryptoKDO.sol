@@ -10,7 +10,7 @@ import "./VaultKDO.sol";
 /**
  * @title CryptoKDO
  * @author Michael Orts
- * @notice CryptoKDO is the entrace to CryptoKDO platform. It manages prize pools and call to VaultKDO.
+ * @notice CryptoKDO is the entrance to CryptoKDO platform. It manages prize pools and calls to VaultKDO.
  */
 contract CryptoKDO is Ownable {
 
@@ -38,8 +38,8 @@ contract CryptoKDO is Ownable {
      * @param wtg AAVE gateway
      * @param erc20 ERC20 token
      */
-    constructor(IWrappedTokenGatewayV3 wtg, IERC20 erc20) Ownable(msg.sender) {
-        vault = new VaultKDO(wtg, erc20);
+    constructor(IWrappedTokenGatewayV3 wtg, IERC20 erc20, uint64 subscriptionId, address vrfCoordinator, bytes32 keyHash) Ownable(msg.sender) {
+        vault = new VaultKDO(wtg, erc20, subscriptionId, vrfCoordinator, keyHash);
     }
 
     receive() external payable {}
