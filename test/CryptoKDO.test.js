@@ -56,15 +56,43 @@ async function deployCryptoKDOWithPassedTimeFixture() {
     await time.increase(3600 * 24 * 2);
     return {cryptoKDO, owner, receiver};
 }
+
+async function deployCryptoKDOWithVRFCoordinatorFixture() {
+    [contractOwner, other] = await ethers.getSigners();
+    let contract = await ethers.getContractFactory('CryptoKDO');
+    let eRC20Contract = await ethers.getContractFactory('ERC20Mock');
+    let wtgContract = await ethers.getContractFactory('WrappedTokenGatewayMock');
+    let vRFCoordinatorV2MockContract = await ethers.getContractFactory('VRFCoordinatorV2Mock');
+
+    const BASE_FEE = "1000000000000000";
+    const GAS_PRICE_LINK = "1000000000";
+    const FUND = "1000000000000000000";
+    const SUB_ID = 1;
+    const KEY_HASH = "0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc";
+
+    const vRFCoordinatorV2Mock = await vRFCoordinatorV2MockContract.deploy(
+        BASE_FEE,
+        GAS_PRICE_LINK
+    );
+    
+    await vRFCoordinatorV2Mock.createSubscription();
+    await vRFCoordinatorV2Mock.fundSubscription(SUB_ID, FUND);
+    
+    eRC20 = await eRC20Contract.deploy();
+    wtg = await wtgContract.deploy(eRC20,{value : ethers.parseEther('1000')});
+    cryptoKDO = await contract.deploy(wtg, eRC20, SUB_ID, vRFCoordinatorV2Mock, KEY_HASH);
+
+    await cryptoKDO.connect(owner).createPrizePool(receiver, [giver1, giver2], "Prize Pool", "test prize pool");
+    await cryptoKDO.connect(owner).createPrizePool(receiver, [giver1, giver2], "Prize Pool", "test prize pool");
+
+    await vRFCoordinatorV2Mock.addConsumer(SUB_ID, cryptoKDO);
+
+    return { cryptoKDO, vRFCoordinatorV2Mock, contractOwner }
+}
   
 describe('Test CryptoKDO Contract', function() {
   
     describe('Initialization', function() {
-        it('should deploy the smart contract with owner', async function() {
-            let {cryptoKDO, contractOwner} = await loadFixture(deployCryptoKDOFixture);
-            let theOwner = await cryptoKDO.owner();
-            assert.equal(contractOwner.address, theOwner);
-        });
         it('should deploy the smart contract with empty prize pools', async function() {
           let {cryptoKDO, contractOwner} = await loadFixture(deployCryptoKDOFixture);
           await expect(cryptoKDO.connect(contractOwner).getPrizePool(0)).to.be.revertedWith("Any prize pool exist at index 0");
@@ -220,6 +248,18 @@ describe('Test CryptoKDO Contract', function() {
             let receiverBalanceAfter = await ethers.provider.getBalance(receiver.address);
             expect(receiverBalanceBetween).to.be.approximately(receiverBalanceBefore + ethers.parseEther('0.1331'),1000000000000000n)
             expect(receiverBalanceAfter).to.be.approximately(receiverBalanceBefore + ethers.parseEther('0.3751'),1000000000000000n)
+        })
+    })
+
+    describe('Prize pools draw', function() {
+        it('should draw a prize pool', async function() {
+            let {cryptoKDO, vRFCoordinatorV2Mock, contractOwner} = await loadFixture(deployCryptoKDOWithVRFCoordinatorFixture);
+            await expect(cryptoKDO.connect(contractOwner).prizePoolDraw()).not.to.be.reverted;
+            let prizePoolLength = await cryptoKDO.connect(contractOwner).getTotalPrizePools();
+            assert.equal(prizePoolLength, 2);
+            await expect(vRFCoordinatorV2Mock.connect(contractOwner).fulfillRandomWordsWithOverride(1,cryptoKDO,[1])).not.to.be.reverted;
+            let winningPrizePool = await cryptoKDO.connect(contractOwner).winningPrizePoolId();
+            assert.equal(winningPrizePool, 1);
         })
     })
 });

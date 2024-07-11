@@ -1,18 +1,28 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity 0.8.24;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "./IWrappedTokenGatewayV3.sol";
 import "./VaultKDO.sol";
+
+import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
+import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
 
 /**
  * @title CryptoKDO
  * @author Michael Orts
  * @notice CryptoKDO is the entrance to CryptoKDO platform. It manages prize pools and calls to VaultKDO.
  */
-contract CryptoKDO is Ownable {
+contract CryptoKDO is VRFConsumerBaseV2{
+
+    uint32 private constant CALLBACK_GAS_LIMIT = 40000;
+    uint16 private constant REQUEST_CONFIRMATIONS = 3;
+    uint32 private constant NUM_WORDS = 1;
+
+    uint256 constant private LOTTERY_TIME = 10 days;
+
+    VRFCoordinatorV2Interface immutable COORDINATOR;
 
     struct PrizePool {
         uint256 amount;
@@ -24,6 +34,11 @@ contract CryptoKDO is Ownable {
     }
 
     uint256 private currentSupply;
+    uint256 private timestamp;
+    uint256 public winningPrizePoolId;
+
+    uint64 private subscriptionId;
+    bytes32 private keyHash;
 
     VaultKDO private immutable vault;
     PrizePool[] private prizePools;
@@ -38,8 +53,12 @@ contract CryptoKDO is Ownable {
      * @param wtg AAVE gateway
      * @param erc20 ERC20 token
      */
-    constructor(IWrappedTokenGatewayV3 wtg, IERC20 erc20, uint64 subscriptionId, address vrfCoordinator, bytes32 keyHash) Ownable(msg.sender) {
-        vault = new VaultKDO(wtg, erc20, subscriptionId, vrfCoordinator, keyHash);
+    constructor(IWrappedTokenGatewayV3 wtg, IERC20 erc20, uint64 _subscriptionId, address vrfCoordinator, bytes32 _keyHash) VRFConsumerBaseV2(vrfCoordinator) {
+        vault = new VaultKDO(wtg, erc20);
+        COORDINATOR = VRFCoordinatorV2Interface(vrfCoordinator);
+        subscriptionId = _subscriptionId;
+        keyHash = _keyHash;
+        timestamp = block.timestamp;
     }
 
     receive() external payable {}
@@ -178,6 +197,20 @@ contract CryptoKDO is Ownable {
         }
         currentSupply = totalSupply;
         _;
+    }
+
+    function fulfillRandomWords(uint256 /*requestId*/, uint256[] memory randomWords) internal override {
+        winningPrizePoolId = randomWords[0] % prizePools.length;
+    }
+
+    function prizePoolDraw() external {
+        COORDINATOR.requestRandomWords(
+            keyHash,
+            subscriptionId,
+            REQUEST_CONFIRMATIONS,
+            CALLBACK_GAS_LIMIT,
+            NUM_WORDS
+        );
     }
 
 }

@@ -9,7 +9,7 @@ async function deployVaultKDOFixture() {
     let wtgContract = await ethers.getContractFactory('WrappedTokenGatewayMock');
     eRC20 = await eRC20Contract.deploy();
     wtg = await wtgContract.deploy(eRC20,{value : ethers.parseEther('1000')});
-    vaultKDO = await contract.deploy(wtg, eRC20,0,'0x0000000000000000000000000000000000000000',"0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc");
+    vaultKDO = await contract.deploy(wtg, eRC20);
     return {vaultKDO, contractOwner, other};
 }
 
@@ -20,41 +20,10 @@ async function deployVaultKDOWithDepositFixture() {
     let wtgContract = await ethers.getContractFactory('WrappedTokenGatewayMock');
     eRC20 = await eRC20Contract.deploy();
     wtg = await wtgContract.deploy(eRC20,{value : ethers.parseEther('1000')});
-    vaultKDO = await contract.deploy(wtg, eRC20,0,'0x0000000000000000000000000000000000000000',"0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc");
+    vaultKDO = await contract.deploy(wtg, eRC20);
     await vaultKDO.connect(contractOwner).deposit({value: ethers.parseEther('1')})
     return {vaultKDO, contractOwner, other};
 }
-
-async function deployVaultKDOWithVRFCoordinatorFixture() {
-    [contractOwner, other] = await ethers.getSigners();
-    let contract = await ethers.getContractFactory('VaultKDO');
-    let eRC20Contract = await ethers.getContractFactory('ERC20Mock');
-    let wtgContract = await ethers.getContractFactory('WrappedTokenGatewayMock');
-    let vRFCoordinatorV2MockContract = await ethers.getContractFactory('VRFCoordinatorV2Mock');
-
-    const BASE_FEE = "1000000000000000";
-    const GAS_PRICE_LINK = "1000000000";
-    const FUND = "1000000000000000000";
-    const SUB_ID = 1;
-    const KEY_HASH = "0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc";
-
-    const vRFCoordinatorV2Mock = await vRFCoordinatorV2MockContract.deploy(
-        BASE_FEE,
-        GAS_PRICE_LINK
-    );
-    
-    await vRFCoordinatorV2Mock.createSubscription();
-    await vRFCoordinatorV2Mock.fundSubscription(SUB_ID, FUND);
-    
-    eRC20 = await eRC20Contract.deploy();
-    wtg = await wtgContract.deploy(eRC20,{value : ethers.parseEther('1000')});
-    vaultKDO = await contract.deploy(wtg, eRC20, SUB_ID, vRFCoordinatorV2Mock, KEY_HASH);
-
-    await vRFCoordinatorV2Mock.addConsumer(SUB_ID, vaultKDO);
-
-    return { vaultKDO, vRFCoordinatorV2Mock, contractOwner }
-}
-
 
 describe('Test VaultKDO Contract', function() {
   
@@ -127,15 +96,4 @@ describe('Test VaultKDO Contract', function() {
         })
     })
 
-    describe('Prize pools draw', function() {
-        it('should draw a prize pool', async function() {
-            let {vaultKDO, vRFCoordinatorV2Mock, contractOwner} = await loadFixture(deployVaultKDOWithVRFCoordinatorFixture);
-            await expect(vaultKDO.connect(contractOwner).prizePoolDraw(10)).not.to.be.reverted;
-            let prizePoolLength = await vaultKDO.connect(contractOwner).prizePoolsLength();
-            assert.equal(prizePoolLength, 10);
-            await expect(vRFCoordinatorV2Mock.connect(contractOwner).fulfillRandomWordsWithOverride(1,vaultKDO,[5])).not.to.be.reverted;
-            let winningPrizePool = await vaultKDO.connect(contractOwner).winningPrizePoolId();
-            assert.equal(winningPrizePool, 5);
-        })
-    })
 })
