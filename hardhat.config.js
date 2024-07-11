@@ -21,7 +21,7 @@ if(PK){
 
 module.exports = {
   solidity: "0.8.24",
-  defaultNetwork: "localhost",
+  defaultNetwork: "hardhat",
   networks: {
     sepolia: sepolia,
     localhost: {
@@ -30,7 +30,7 @@ module.exports = {
     },
     hardhat: {
       mining: {
-        auto: false,
+        auto: true,
         interval: 1000
       }
     }
