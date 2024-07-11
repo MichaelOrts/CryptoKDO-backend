@@ -1,3 +1,5 @@
+const { time } = require("@nomicfoundation/hardhat-toolbox/network-helpers");
+
 require("@nomicfoundation/hardhat-toolbox");
 require("@nomicfoundation/hardhat-verify");
 require('dotenv').config()
@@ -19,14 +21,27 @@ if(PK){
 
 module.exports = {
   solidity: "0.8.24",
-  defaultNetwork: "hardhat",
+  defaultNetwork: "localhost",
   networks: {
     sepolia: sepolia,
-    hardhat: {
+    localhost: {
+      url: "http://127.0.0.1:8545",
       chainId: 31337,
+    },
+    hardhat: {
+      mining: {
+        auto: false,
+        interval: 1000
+      }
     }
   },
   etherscan: {
     apiKey: ETHERSCAN
   },
 };
+
+task("timeTravel", "mines new block with timestamp increased by hours")
+  .addParam("hours", "time to advance in hours")
+  .setAction(async (taskArgs) => {
+    await time.increase(3600 * taskArgs.hours);
+  })

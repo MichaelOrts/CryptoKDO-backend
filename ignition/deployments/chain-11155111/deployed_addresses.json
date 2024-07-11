@@ -1,3 +1,6 @@
 {
-  "CryptoKDOModule#CryptoKDO": "0xdE666050fACBe46BCCBcC5D7e7892a838C05934f"
+  "CryptoKDOModule#CryptoKDO": "0xFC3E989F200804A704A4a5550Bd656186451cBde",
+  "CryptoKDOModule#ERC20Mock": "0xb3823D6CbC64fec91e9d2BFb0db72d4245Bd2904",
+  "CryptoKDOModule#WrappedTokenGatewayMock": "0x6ef98E79B1A4BbD505149247D1fB7abCFf85b22d",
+  "CryptoKDOModuleHardhat#CryptoKDO": "0x3248836fab027Ed106A44eCdc2F97b59D2f13E91"
 }
