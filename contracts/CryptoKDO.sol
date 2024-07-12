@@ -22,7 +22,9 @@ contract CryptoKDO is VRFConsumerBaseV2{
 
     uint256 constant private LOTTERY_TIME = 10 days;
 
-    VRFCoordinatorV2Interface immutable COORDINATOR;
+    VRFCoordinatorV2Interface immutable private coordinator;
+    uint64 immutable private subscriptionId;
+    bytes32 immutable private keyHash;
 
     struct PrizePool {
         uint256 amount;
@@ -33,15 +35,13 @@ contract CryptoKDO is VRFConsumerBaseV2{
         address[] givers;
     }
 
-    uint256 private currentSupply;
-    uint256 private timestamp;
-    uint256 public winningPrizePoolId;
-
-    uint64 private subscriptionId;
-    bytes32 private keyHash;
-
     VaultKDO private immutable vault;
     PrizePool[] private prizePools;
+
+    uint256 public currentSupply;
+    uint256 public lastLotteryTimestamp;
+    uint256 public winningPrizePoolId;
+    uint256 public reward;
 
     event PrizePoolCreated(uint id, address owner, address receiver, address[] givers, string title, string description);
     event DonationDone(uint id, address giver, uint amount);
@@ -55,10 +55,10 @@ contract CryptoKDO is VRFConsumerBaseV2{
      */
     constructor(IWrappedTokenGatewayV3 wtg, IERC20 erc20, uint64 _subscriptionId, address vrfCoordinator, bytes32 _keyHash) VRFConsumerBaseV2(vrfCoordinator) {
         vault = new VaultKDO(wtg, erc20);
-        COORDINATOR = VRFCoordinatorV2Interface(vrfCoordinator);
+        coordinator = VRFCoordinatorV2Interface(vrfCoordinator);
         subscriptionId = _subscriptionId;
         keyHash = _keyHash;
-        timestamp = block.timestamp;
+        lastLotteryTimestamp = block.timestamp;
     }
 
     receive() external payable {}
@@ -117,34 +117,20 @@ contract CryptoKDO is VRFConsumerBaseV2{
     }
 
     /**
-     * Returns a prize pool. Add reward if needed.
+     * Returns a prize pool.
      * 
      * @param index pool index to return
      */
     function getPrizePool(uint index) external view returns (PrizePool memory) {
         require(index < prizePools.length, string.concat("Any prize pool exist at index ", Strings.toString(index)));
-        PrizePool memory prizePool = prizePools[index];
-        prizePool.amount += computeReward(prizePool.amount, getTotalSupply());
-        return prizePool;
+        return prizePools[index];
     }
 
     /**
-     * returns all active pools. Add reward if needed.
+     * returns all active pools.
      */
     function getAllPrizePools() external view returns (PrizePool[] memory) {
-        PrizePool[] memory pools = prizePools;
-        uint256 totalSupply = getTotalSupply();
-        for (uint i = 0; i < pools.length; i++) {
-            pools[i].amount += computeReward(pools[i].amount, totalSupply);
-        }
-        return pools;
-    }
-
-    /**
-     * Returns all supply deposited with rewards added.
-     */
-    function getTotalSupply() public view returns (uint256) {
-        return vault.getSupply();
+        return prizePools;
     }
 
     /**
@@ -174,37 +160,40 @@ contract CryptoKDO is VRFConsumerBaseV2{
     }
 
     /**
-     * Computes reward switch amount deposited.
-     * 
-     * @param amount amount to compute
-     * @param totalSupply supply with rewards
-     */
-    function computeReward(uint256 amount, uint256 totalSupply) internal view returns (uint256) {
-        if (currentSupply > 0){
-            return (totalSupply - currentSupply) * amount / currentSupply;
-        }else{
-            return 0;
-        }
-    }
-
-    /**
      * Updates rewards on prize pools and supply.
      */
     modifier updateRewards() {
-        uint256 totalSupply = getTotalSupply();
-        for (uint i = 0; i < prizePools.length; i++) {
-            prizePools[i].amount += computeReward(prizePools[i].amount, totalSupply);
+        reward = vault.getSupply() - currentSupply;
+        if(block.timestamp > lastLotteryTimestamp + LOTTERY_TIME){
+            prizePoolDraw();
+            currentSupply += reward; // fail if its done in fulfilRandomWords
+            lastLotteryTimestamp += LOTTERY_TIME;
         }
-        currentSupply = totalSupply;
         _;
     }
 
+    /**
+     * Call updateRewards
+     * 
+     * @dev call update rewards is necessary to refresh prize pools with lottery and rewards
+     */
+    function callUpdateRewards() external updateRewards () {}
+
+    /**
+     * Updates winning prize pool and reward.
+     * @param randomWords randomWords generated
+     */
     function fulfillRandomWords(uint256 /*requestId*/, uint256[] memory randomWords) internal override {
         winningPrizePoolId = randomWords[0] % prizePools.length;
+        prizePools[winningPrizePoolId].amount += reward;
+        reward = 0;
     }
 
-    function prizePoolDraw() external {
-        COORDINATOR.requestRandomWords(
+    /**
+     * Call VRF to genereate new random word.
+     */
+    function prizePoolDraw() public {
+        coordinator.requestRandomWords(
             keyHash,
             subscriptionId,
             REQUEST_CONFIRMATIONS,
