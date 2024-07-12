@@ -117,9 +117,9 @@ contract CryptoKDO is VRFConsumerBaseV2{
     function updateRewards() external {
         reward = vault.getSupply() - currentSupply;
         if(block.timestamp > lastLotteryTimestamp + LOTTERY_TIME){
-            prizePoolDraw();
             currentSupply += reward; // fail if its done in fulfilRandomWords
             lastLotteryTimestamp += LOTTERY_TIME;
+            prizePoolDraw();
         }
     }
 
