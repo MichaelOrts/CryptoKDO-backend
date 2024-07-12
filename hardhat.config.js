@@ -53,4 +53,21 @@ task("timeTravel", "mines new block with timestamp increased by hours")
   .addParam("hours", "time to advance in hours")
   .setAction(async (taskArgs) => {
     await time.increase(3600 * taskArgs.hours);
+    console.log("done");
+  })
+
+  task("random", "call vrf to generate words")
+  .addParam("vrf", "vrf address")
+  .addParam("consumer", "consumer address")
+  .addParam("id", "request id")
+  .addOptionalParam("value", "set value generated")
+  .setAction(async (taskArgs) => {
+    const VRFContract = await ethers.getContractFactory("VRFCoordinatorV2Mock");
+    const vrf = await VRFContract.attach(taskArgs.vrf);
+    if(taskArgs.value != undefined){
+      await vrf.fulfillRandomWordsWithOverride(taskArgs.id, taskArgs.consumer, [taskArgs.value]);
+    }else{
+      await vrf.fulfillRandomWords(taskArgs.id, taskArgs.consumer);
+    }
+    console.log("done");
   })
