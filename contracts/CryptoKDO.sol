@@ -42,6 +42,7 @@ contract CryptoKDO is VRFConsumerBaseV2{
     uint256 public lastLotteryTimestamp;
     uint256 public winningPrizePoolId;
     uint256 public reward;
+    uint256 private lastRequestId;
 
     event PrizePoolCreated(uint id, address owner, address receiver, address[] givers, string title, string description);
     event DonationDone(uint id, address giver, uint amount);
@@ -175,9 +176,11 @@ contract CryptoKDO is VRFConsumerBaseV2{
 
     /**
      * Updates winning prize pool and reward.
+     * @param requestId request id
      * @param randomWords randomWords generated
      */
-    function fulfillRandomWords(uint256 /*requestId*/, uint256[] memory randomWords) internal override {
+    function fulfillRandomWords(uint256 requestId, uint256[] memory randomWords) internal override {
+        require(lastRequestId == requestId);
         winningPrizePoolId = randomWords[0] % prizePools.length;
         prizePools[winningPrizePoolId].amount += reward;
         reward = 0;
@@ -187,7 +190,7 @@ contract CryptoKDO is VRFConsumerBaseV2{
      * Call VRF to genereate new random word.
      */
     function prizePoolDraw() internal {
-        coordinator.requestRandomWords(
+        lastRequestId = coordinator.requestRandomWords(
             keyHash,
             subscriptionId,
             REQUEST_CONFIRMATIONS,
