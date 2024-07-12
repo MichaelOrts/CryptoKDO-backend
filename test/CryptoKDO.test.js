@@ -100,7 +100,7 @@ async function deployCryptoKDOWithPassedTimeFixture() {
     await cryptoKDO.connect(giver2).donate(1, {value: ethers.parseEther('5')});
     await time.increase(3600 * 24 * 7);
     await vRFCoordinatorV2Mock.addConsumer(SUB_ID, cryptoKDO);
-    await cryptoKDO.connect(contractOwner).callUpdateRewards();
+    await cryptoKDO.connect(contractOwner).updateRewards();
     await vRFCoordinatorV2Mock.connect(contractOwner).fulfillRandomWordsWithOverride(1,cryptoKDO,[1]);
     return { cryptoKDO, vRFCoordinatorV2Mock, contractOwner, owner, receiver }
 }
@@ -143,7 +143,7 @@ describe('Test CryptoKDO Contract', function() {
                 let {cryptoKDO, contractOwner} = await loadFixture(deployCryptoKDOFixture);
                 let lastTimeLotteryBefore = await cryptoKDO.connect(contractOwner).lastLotteryTimestamp();
                 await time.increase(3600 * 24 * 10);
-                await cryptoKDO.connect(contractOwner).callUpdateRewards();
+                await cryptoKDO.connect(contractOwner).updateRewards();
                 let lastTimeLotteryAfter = await cryptoKDO.connect(contractOwner).lastLotteryTimestamp();
                 assert.equal(lastTimeLotteryAfter, lastTimeLotteryBefore + 3600n * 24n * 10n);
             });
@@ -152,7 +152,7 @@ describe('Test CryptoKDO Contract', function() {
                 await cryptoKDO.connect(owner).createPrizePool(receiver.address, [giver1.address], "Prize Pool", "test prize pool");
                 await cryptoKDO.connect(owner).createPrizePool(receiver.address, [giver2.address], "Prize Pool", "test prize pool");
                 await time.increase(3600 * 24 * 10);
-                await cryptoKDO.connect(contractOwner).callUpdateRewards();
+                await cryptoKDO.connect(contractOwner).updateRewards();
                 await vRFCoordinatorV2Mock.connect(contractOwner).fulfillRandomWordsWithOverride(1,cryptoKDO,[1]);
                 let winningPrizePoolId = await cryptoKDO.connect(contractOwner).winningPrizePoolId();
                 assert.equal(winningPrizePoolId, 1);
@@ -173,7 +173,7 @@ describe('Test CryptoKDO Contract', function() {
                 await cryptoKDO.connect(giver1).donate(0, {value : ethers.parseEther('0.005')});
                 await cryptoKDO.connect(giver2).donate(1, {value : ethers.parseEther('0.005')});
                 await time.increase(3600 * 24 * 1);
-                await cryptoKDO.connect(contractOwner).callUpdateRewards();
+                await cryptoKDO.connect(contractOwner).updateRewards();
                 let totalSupply = await cryptoKDO.connect(contractOwner).reward();
                 assert.equal(totalSupply, ethers.parseEther('0.001'));
             });
@@ -269,7 +269,8 @@ describe('Test CryptoKDO Contract', function() {
     describe('Prize pools draw', function() {
         it('should draw a prize pool', async function() {
             let {cryptoKDO, vRFCoordinatorV2Mock, contractOwner} = await loadFixture(deployCryptoKDOWithVRFCoordinatorFixture);
-            await expect(cryptoKDO.connect(contractOwner).prizePoolDraw()).not.to.be.reverted;
+            await time.increase(3600 * 24 *10);
+            await cryptoKDO.connect(contractOwner).updateRewards();
             let prizePoolLength = await cryptoKDO.connect(contractOwner).getTotalPrizePools();
             assert.equal(prizePoolLength, 2);
             await expect(vRFCoordinatorV2Mock.connect(contractOwner).fulfillRandomWordsWithOverride(1,cryptoKDO,[1])).not.to.be.reverted;

@@ -84,7 +84,7 @@ contract CryptoKDO is VRFConsumerBaseV2{
      * 
      * @param index pool index to close
      */
-    function closePrizePool(uint256 index) external updateRewards {
+    function closePrizePool(uint256 index) external {
         require(msg.sender == prizePools[index].owner, "You cannot close prize pool if you are not owner");
         PrizePool memory prizePool = prizePools[index];
         removePrizePool(index);
@@ -100,13 +100,27 @@ contract CryptoKDO is VRFConsumerBaseV2{
      * 
      * @param index pool index to donate
      */
-    function donate(uint256 index) external payable updateRewards {
+    function donate(uint256 index) external payable {
         require(onlyGiver(prizePools[index].givers), "You cannot donate if you are not giver");
         require(msg.value >= 0.003 ether, "Donation minimum is 0.003 ether");
         prizePools[index].amount += msg.value;
         currentSupply += msg.value;
         emit DonationDone(index, msg.sender, msg.value);
         vault.deposit{value: msg.value}();
+    }
+
+    /**
+     * Updates rewards on prize pools and supply.
+     * 
+     * @dev update rewards is necessary to refresh prize pools with lottery and rewards
+     */
+    function updateRewards() external {
+        reward = vault.getSupply() - currentSupply;
+        if(block.timestamp > lastLotteryTimestamp + LOTTERY_TIME){
+            prizePoolDraw();
+            currentSupply += reward; // fail if its done in fulfilRandomWords
+            lastLotteryTimestamp += LOTTERY_TIME;
+        }
     }
 
     /**
@@ -160,26 +174,6 @@ contract CryptoKDO is VRFConsumerBaseV2{
     }
 
     /**
-     * Updates rewards on prize pools and supply.
-     */
-    modifier updateRewards() {
-        reward = vault.getSupply() - currentSupply;
-        if(block.timestamp > lastLotteryTimestamp + LOTTERY_TIME){
-            prizePoolDraw();
-            currentSupply += reward; // fail if its done in fulfilRandomWords
-            lastLotteryTimestamp += LOTTERY_TIME;
-        }
-        _;
-    }
-
-    /**
-     * Call updateRewards
-     * 
-     * @dev call update rewards is necessary to refresh prize pools with lottery and rewards
-     */
-    function callUpdateRewards() external updateRewards () {}
-
-    /**
      * Updates winning prize pool and reward.
      * @param randomWords randomWords generated
      */
@@ -192,7 +186,7 @@ contract CryptoKDO is VRFConsumerBaseV2{
     /**
      * Call VRF to genereate new random word.
      */
-    function prizePoolDraw() public {
+    function prizePoolDraw() internal {
         coordinator.requestRandomWords(
             keyHash,
             subscriptionId,
