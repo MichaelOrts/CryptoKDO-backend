@@ -6,101 +6,63 @@ const { ethers } = require('hardhat');
 const SUB_ID = 1;
 const KEY_HASH = "0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc";
 
-async function deployVRFCoordinator() {
-    let vRFCoordinatorV2MockContract = await ethers.getContractFactory('VRFCoordinatorV2Mock');
-
+async function deployVRFCoordinatorFixture() {
     const BASE_FEE = "1000000000000000";
     const GAS_PRICE_LINK = "1000000000";
     const FUND = "1000000000000000000";
 
-    const vRFCoordinatorV2Mock = await vRFCoordinatorV2MockContract.deploy(
-        BASE_FEE,
-        GAS_PRICE_LINK
-    );
-    
+    const vRFCoordinatorV2MockContract = await ethers.getContractFactory('VRFCoordinatorV2Mock');
+    const vRFCoordinatorV2Mock = await vRFCoordinatorV2MockContract.deploy(BASE_FEE,GAS_PRICE_LINK);
+
     await vRFCoordinatorV2Mock.createSubscription();
     await vRFCoordinatorV2Mock.fundSubscription(SUB_ID, FUND);
-
     return vRFCoordinatorV2Mock;
 }
 
 async function deployCryptoKDOFixture() {
-    [contractOwner, owner, receiver, giver1, giver2] = await ethers.getSigners();
+    [contractOwner, owner, receiver, giver1, giver2, other] = await ethers.getSigners();
+
     let contract = await ethers.getContractFactory('CryptoKDO');
     let eRC20Contract = await ethers.getContractFactory('ERC20Mock');
     let wtgContract = await ethers.getContractFactory('WrappedTokenGatewayMock');
-    let vRFCoordinatorV2Mock = await deployVRFCoordinator();
+    let vRFCoordinatorV2Mock = await deployVRFCoordinatorFixture();
+
     eRC20 = await eRC20Contract.deploy();
     wtg = await wtgContract.deploy(eRC20,{value : ethers.parseEther('1000')});
     cryptoKDO = await contract.deploy(wtg, eRC20,1,vRFCoordinatorV2Mock,KEY_HASH);
+
     await vRFCoordinatorV2Mock.addConsumer(SUB_ID, cryptoKDO);
-    return {cryptoKDO, contractOwner, owner, receiver, giver1, giver2, vRFCoordinatorV2Mock};
+    return {cryptoKDO, contractOwner, owner, receiver, giver1, giver2, other, vRFCoordinatorV2Mock};
 }
 
 async function deployCryptoKDOWithPrizePoolFixture() {
-    [contractOwner, owner, receiver, giver1, giver2, other] = await ethers.getSigners();
-    let contract = await ethers.getContractFactory('CryptoKDO');
-    let eRC20Contract = await ethers.getContractFactory('ERC20Mock');
-    let wtgContract = await ethers.getContractFactory('WrappedTokenGatewayMock');
-    let vRFCoordinatorV2Mock = await deployVRFCoordinator();
-    eRC20 = await eRC20Contract.deploy();
-    wtg = await wtgContract.deploy(eRC20,{value : ethers.parseEther('1000')});
-    cryptoKDO = await contract.deploy(wtg, eRC20,1,vRFCoordinatorV2Mock,KEY_HASH);
-    await vRFCoordinatorV2Mock.addConsumer(SUB_ID, cryptoKDO);
+    let {cryptoKDO, contractOwner, owner, receiver, giver1, giver2, other, vRFCoordinatorV2Mock} = await loadFixture(deployCryptoKDOFixture);
     await cryptoKDO.connect(owner).createPrizePool(receiver, [giver1, giver2], "Prize Pool", "test prize pool");
-    return {cryptoKDO, giver1, giver2, other};
+    return {cryptoKDO, contractOwner, owner, receiver, giver1, giver2, other, vRFCoordinatorV2Mock};
 }
 
 async function deployCryptoKDOWithFullPrizePoolFixture() {
-    [contractOwner, owner, receiver, giver1, giver2, other] = await ethers.getSigners();
-    let contract = await ethers.getContractFactory('CryptoKDO');
+    let {cryptoKDO, contractOwner, owner, receiver, giver1, giver2, other, vRFCoordinatorV2Mock} = await loadFixture(deployCryptoKDOWithPrizePoolFixture)
     let amount = ethers.parseEther('0.1');
-    let eRC20Contract = await ethers.getContractFactory('ERC20Mock');
-    let wtgContract = await ethers.getContractFactory('WrappedTokenGatewayMock');
-    let vRFCoordinatorV2Mock = await deployVRFCoordinator();
-    eRC20 = await eRC20Contract.deploy();
-    wtg = await wtgContract.deploy(eRC20,{value : ethers.parseEther('1000')});
-    cryptoKDO = await contract.deploy(wtg, eRC20,1,vRFCoordinatorV2Mock,KEY_HASH);
-    await vRFCoordinatorV2Mock.addConsumer(SUB_ID, cryptoKDO);
-    await cryptoKDO.connect(owner).createPrizePool(receiver, [giver1, giver2], "Prize Pool", "test prize pool");
     await cryptoKDO.connect(giver1).donate(0, {value: amount});
-    return {cryptoKDO, owner, receiver, giver1, giver2, other, amount};
+    return {cryptoKDO, contractOwner, owner, receiver, giver1, giver2, other, vRFCoordinatorV2Mock, amount};
 }
 
-async function deployCryptoKDOWithVRFCoordinatorFixture() {
-    [contractOwner, owner, receiver, giver1, giver2] = await ethers.getSigners();
-    let contract = await ethers.getContractFactory('CryptoKDO');
-    let eRC20Contract = await ethers.getContractFactory('ERC20Mock');
-    let wtgContract = await ethers.getContractFactory('WrappedTokenGatewayMock');
-    let vRFCoordinatorV2Mock = await deployVRFCoordinator();
-    eRC20 = await eRC20Contract.deploy();
-    wtg = await wtgContract.deploy(eRC20,{value : ethers.parseEther('1000')});
-    cryptoKDO = await contract.deploy(wtg, eRC20, SUB_ID, vRFCoordinatorV2Mock, KEY_HASH);
+async function deployCryptoKDOWithTwoPrizePoolFixture() {
+    let {cryptoKDO, contractOwner, owner, receiver, giver1, giver2, other, vRFCoordinatorV2Mock} = await loadFixture(deployCryptoKDOWithPrizePoolFixture);
     await cryptoKDO.connect(owner).createPrizePool(receiver, [giver1, giver2], "Prize Pool", "test prize pool");
-    await cryptoKDO.connect(owner).createPrizePool(receiver, [giver1, giver2], "Prize Pool", "test prize pool");
-    await vRFCoordinatorV2Mock.addConsumer(SUB_ID, cryptoKDO);
-    return { cryptoKDO, vRFCoordinatorV2Mock, contractOwner }
+    return {cryptoKDO, contractOwner, owner, receiver, giver1, giver2, other, vRFCoordinatorV2Mock}
 }
 
 async function deployCryptoKDOWithPassedTimeFixture() {
-    [contractOwner, owner, receiver, giver1, giver2] = await ethers.getSigners();
-    let contract = await ethers.getContractFactory('CryptoKDO');
-    let eRC20Contract = await ethers.getContractFactory('ERC20Mock');
-    let wtgContract = await ethers.getContractFactory('WrappedTokenGatewayMock');
-    let vRFCoordinatorV2Mock = await deployVRFCoordinator();
-    eRC20 = await eRC20Contract.deploy();
-    wtg = await wtgContract.deploy(eRC20,{value : ethers.parseEther('1000')});
-    cryptoKDO = await contract.deploy(wtg, eRC20, SUB_ID, vRFCoordinatorV2Mock, KEY_HASH);
-    await cryptoKDO.connect(owner).createPrizePool(receiver, [giver1, giver2], "Prize Pool", "test prize pool");
-    await cryptoKDO.connect(owner).createPrizePool(receiver, [giver1, giver2], "Prize Pool", "test prize pool");
+    let {cryptoKDO, contractOwner, owner, receiver, giver1, giver2, other, vRFCoordinatorV2Mock} = await loadFixture(deployCryptoKDOWithTwoPrizePoolFixture);
     await cryptoKDO.connect(giver1).donate(0, {value: ethers.parseEther('10')});
     await time.increase(3600 * 24 * 3);
     await cryptoKDO.connect(giver2).donate(1, {value: ethers.parseEther('5')});
     await time.increase(3600 * 24 * 7);
-    await vRFCoordinatorV2Mock.addConsumer(SUB_ID, cryptoKDO);
     await cryptoKDO.connect(contractOwner).updateRewards();
     await vRFCoordinatorV2Mock.connect(contractOwner).fulfillRandomWordsWithOverride(1,cryptoKDO,[1]);
-    return { cryptoKDO, vRFCoordinatorV2Mock, contractOwner, owner, receiver }
+    return {cryptoKDO, contractOwner, owner, receiver, giver1, giver2, other, vRFCoordinatorV2Mock}
 }
   
 describe('Test CryptoKDO Contract', function() {
@@ -146,7 +108,7 @@ describe('Test CryptoKDO Contract', function() {
                 assert.equal(lastTimeLotteryAfter, lastTimeLotteryBefore + 3600n * 24n * 10n);
             });
             it('should get winning prize pool id', async function() {
-                let {cryptoKDO, contractOwner, owner, receiver, giver1, giver2, vRFCoordinatorV2Mock} = await loadFixture(deployCryptoKDOFixture);
+                let {cryptoKDO, contractOwner, owner, receiver, giver1, giver2, other, vRFCoordinatorV2Mock} = await loadFixture(deployCryptoKDOFixture);
                 await cryptoKDO.connect(owner).createPrizePool(receiver.address, [giver1.address], "Prize Pool", "test prize pool");
                 await cryptoKDO.connect(owner).createPrizePool(receiver.address, [giver2.address], "Prize Pool", "test prize pool");
                 await time.increase(3600 * 24 * 10);
@@ -266,7 +228,7 @@ describe('Test CryptoKDO Contract', function() {
 
     describe('Prize pools draw', function() {
         it('should draw a prize pool', async function() {
-            let {cryptoKDO, vRFCoordinatorV2Mock, contractOwner} = await loadFixture(deployCryptoKDOWithVRFCoordinatorFixture);
+            let {cryptoKDO, vRFCoordinatorV2Mock, contractOwner} = await loadFixture(deployCryptoKDOWithTwoPrizePoolFixture);
             await time.increase(3600 * 24 *10);
             await cryptoKDO.connect(contractOwner).updateRewards();
             let prizePoolLength = await cryptoKDO.connect(contractOwner).getTotalPrizePools();

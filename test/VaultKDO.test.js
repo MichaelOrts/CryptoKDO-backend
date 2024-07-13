@@ -4,24 +4,21 @@ const { ethers } = require('hardhat');
   
 async function deployVaultKDOFixture() {
     [contractOwner, other] = await ethers.getSigners();
+
     let contract = await ethers.getContractFactory('VaultKDO');
     let eRC20Contract = await ethers.getContractFactory('ERC20Mock');
     let wtgContract = await ethers.getContractFactory('WrappedTokenGatewayMock');
+
     eRC20 = await eRC20Contract.deploy();
     wtg = await wtgContract.deploy(eRC20,{value : ethers.parseEther('1000')});
     vaultKDO = await contract.deploy(wtg, eRC20);
+
     return {vaultKDO, contractOwner, other};
 }
 
 async function deployVaultKDOWithDepositFixture() {
-    [contractOwner, other] = await ethers.getSigners();
-    let contract = await ethers.getContractFactory('VaultKDO');
-    let eRC20Contract = await ethers.getContractFactory('ERC20Mock');
-    let wtgContract = await ethers.getContractFactory('WrappedTokenGatewayMock');
-    eRC20 = await eRC20Contract.deploy();
-    wtg = await wtgContract.deploy(eRC20,{value : ethers.parseEther('1000')});
-    vaultKDO = await contract.deploy(wtg, eRC20);
-    await vaultKDO.connect(contractOwner).deposit({value: ethers.parseEther('1')})
+    let {vaultKDO, contractOwner, other} = await loadFixture(deployVaultKDOFixture);
+    await vaultKDO.connect(contractOwner).deposit({value: ethers.parseEther('1')});
     return {vaultKDO, contractOwner, other};
 }
 
